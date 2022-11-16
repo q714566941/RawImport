@@ -22,6 +22,7 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
         self.initRawSourcePath()
         self.initRawDesPath()
         self.initComlectPath()
+        self.initProgramPath()
 
         self.initFolderPre()
 
@@ -32,6 +33,7 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
         self.RawSourceB.clicked.connect(self.setRawSourcePath)
         self.RawDesB.clicked.connect(self.setRawDesPath)
         self.ComplectB.clicked.connect(self.setComplectPath)
+        self.ProgramB.clicked.connect(self.setProgramPath)
         self.folderNameL.returnPressed.connect(self.createFolder)
         self.StartB.clicked.connect(self.startImport)
         self.part_down_signal.connect(self.update_progress)
@@ -48,7 +50,7 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
             self.settings.setValue("PATH/preRawSourcePath", preRawSourcePath)
             self.rawSourceLable.clear()
     def setRawDesPath(self):
-        rawDesPath = QFileDialog.getExistingDirectory(None, "请选择Raw存储路径")
+        rawDesPath = QFileDialog.getExistingDirectory(None, "请选择电脑中Raw存储路径")
         if rawDesPath != "":
             self.RawDesL.setText(rawDesPath)
             self.settings.setValue("PATH/rawDesPath", rawDesPath)
@@ -59,6 +61,14 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
         if complectPath != "":
             self.ComplectL.setText(complectPath)
             self.settings.setValue("PATH/complectPath", complectPath)
+            self.complectLable.clear()
+
+    def setProgramPath(self):
+        programPath = QFileDialog.getOpenFileName(self, "请选择程序exe路径")[0]
+        print(programPath)
+        if programPath != "":
+            self.ProgramL.setText(programPath)
+            self.settings.setValue("PATH/programPath", programPath)
             self.complectLable.clear()
 
     def createFolder(self):
@@ -89,6 +99,7 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
                 flage = False
         except FileNotFoundError:
             self.rawDesLable.setText("请选择正确的图片目标路径")
+
         try:
             if self.ComplectL.text() != "":
                 os.listdir(self.ComplectL.text())
@@ -122,11 +133,15 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
                 self.copy_between_folders(rawSourcePath, rawDesPath)
             if not os.path.exists(complectPath):
                 os.mkdir(complectPath)
-            # open Br
+
+
+        # open Br
+        if self.ProgramL.text() != "":
             try:
                 os.startfile(r'C:\Program Files\Adobe\Adobe Bridge 2022\Bridge.exe')
             except:
                 pass
+
 
 
     def initRawSourcePath(self):
@@ -158,6 +173,16 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
                 self.ComplectL.setText(self.settings.value("PATH/complectPath"))
         except FileNotFoundError:
             self.ComplectL.clear()
+
+    def initProgramPath(self):
+        try:
+            if (self.settings.value("PATH/programPath") is not None and self.settings.value(
+                    "PATH/programPath") != ""):
+                if os.path.exists(self.settings.value("PATH/programPath")):
+                    self.ProgramL.setText(self.settings.value("PATH/programPath"))
+        except :
+            pass
+
 
     def initFolderPre(self):
         year = datetime.datetime.now().year
