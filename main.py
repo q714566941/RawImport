@@ -15,6 +15,8 @@ class Ui_importRawTool(object):
     def setupUi(self, importRawTool):
         importRawTool.setObjectName("importRawTool")
         importRawTool.resize(500, 600)
+        importRawTool.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)    # 只显示关闭按钮
+        importRawTool.setFixedSize(importRawTool.width(), importRawTool.height());  # 禁止调整窗口大小
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icon/icon.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         importRawTool.setWindowIcon(icon)
