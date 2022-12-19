@@ -7,6 +7,53 @@ import os
 import shutil
 from os.path import join, getsize
 import datetime
+import time
+
+# 多线程
+# 继承QThread
+class Runthread(QtCore.QThread, QMainWindow, Ui_importRawTool):
+
+    # 主线程向子线程传参
+    srcDir = None
+    desDir = None
+
+    #  通过类成员对象定义信号对象
+    part_down_signal = pyqtSignal(int)
+
+    def __init__(self):
+        super(Runthread, self).__init__()
+
+    def __del__(self):
+        self.wait()
+    # 主线程向子线程传参
+    def setDir(self, src, des):
+        self.srcDir = src
+        self.desDir = des
+
+    # 耗时操作
+    def run(self):
+
+        print("begin---")
+
+        files = os.listdir(self.srcDir)
+        # compute folder size
+        source_size = 0
+        file_copied = 0
+        source_size += sum([getsize(join(self.srcDir, file)) for file in files])
+
+        # copy
+        for f in files:
+            filePath = os.path.join(self.srcDir, f)
+            if os.path.isfile(filePath):
+                shutil.copy(filePath, self.desDir)
+                file_copied += getsize(filePath)
+                if source_size != 0:
+                    self.part_down_signal.emit(file_copied * 100 / source_size)
+                else:
+                    self.part_down_signal.emit(100)
+
+
+
 
 class MyMainWindow(QMainWindow, Ui_importRawTool):
 
@@ -27,6 +74,9 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
 
         self.initFolderPre()
 
+        # 线程初始化
+        self.thread = None
+
 
 
     def initUI( self ):
@@ -37,7 +87,7 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
         self.ProgramB.clicked.connect(self.setProgramPath)
         self.folderNameL.returnPressed.connect(self.createFolder)
         self.StartB.clicked.connect(self.startImport)
-        self.part_down_signal.connect(self.update_progress)
+        # self.part_down_signal.connect(self.update_progress)
 
 
     # slots
@@ -128,21 +178,31 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
             folderName = self.folderNameL.text()
             rawDesPath = self.RawDesL.text() + "/" + folderName + "/"
             complectPath = self.ComplectL.text() + "/" + folderName + "/"
-            if not os.path.exists(rawDesPath):
-                os.mkdir(rawDesPath)
-                print(rawDesPath)
-                self.progressBar.show()
-                self.copy_between_folders(rawSourcePath, rawDesPath)
+
             if not os.path.exists(complectPath):
                 os.mkdir(complectPath)
+            if not os.path.exists(rawDesPath):
+                os.mkdir(rawDesPath)
+                self.progressBar.show()
+                self.progressBar.setValue(0)
+
+                # 创建线程
+                self.thread = Runthread()
+                # 向子线程传参
+                self.thread.setDir(rawSourcePath, rawDesPath)
+                # 连接信号(子线程向主线程传返回值)
+                self.thread.part_down_signal.connect(self.update_progress)
+                # 开始线程
+                self.thread.start()
 
 
-        # open Br
-        if self.ProgramL.text() != "" and flage:
-            try:
-                os.startfile(r'C:\Program Files\Adobe\Adobe Bridge 2022\Bridge.exe')
-            except:
-                pass
+        # 子线程结束后 Br
+        if self.thread.isFinished():
+            if self.ProgramL.text() != "" and flage:
+                try:
+                    os.startfile(r'C:\Program Files\Adobe\Adobe Bridge 2022\Bridge.exe')
+                except:
+                    pass
 
 
 
@@ -192,30 +252,14 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
         day = datetime.datetime.now().day
         self.folderNameL.setText(str(year) + "-" + str(month) + "-" + str(day))
 
-    def copy_between_folders(self, srcDir, desDir):
-        files = os.listdir(srcDir)
-        # compute folder size
-        source_size = 0
-        file_copied = 0
-        source_size += sum([getsize(join(srcDir, file)) for file in files])
 
-        # copy
-        for f in files:
-            filePath = os.path.join(srcDir, f)
-            if os.path.isfile(filePath):
-                shutil.copy(filePath, desDir)
-                file_copied += getsize(filePath)
-                if source_size != 0:
-                    self.part_down_signal.emit(file_copied * 100 / source_size)
-                else:
-                    self.part_down_signal.emit(100)
 
     def update_progress(self, progress):
         self.progressBar.setValue(progress)
 
     def retranslateUi(self, importRawTool):
         _translate = QtCore.QCoreApplication.translate
-        importRawTool.setWindowTitle(_translate("importRawTool", "Raw导入小助手v1.0"))
+        importRawTool.setWindowTitle(_translate("importRawTool", "Raw导入小助手v2.0"))
         self.label_2.setText(_translate("importRawTool",
                                         "<html><head/><body><p><span style=\" font-weight:600;\">图片来源路径</span></p></body></html>"))
         self.label_6.setText(_translate("importRawTool",
@@ -227,7 +271,9 @@ class MyMainWindow(QMainWindow, Ui_importRawTool):
         self.label_19.setText(_translate("importRawTool", "新文件夹名称"))
         self.StartB.setText(_translate("importRawTool", "开始导入"))
 
+
 if __name__ == "__main__":
+
     app = QApplication(sys.argv)
     win = MyMainWindow()
     win.show()
